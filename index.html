@@ -19,9 +19,9 @@
     <canvas id="image-canvas" width="500" height="500" style="border: 1px solid black;"></canvas>
 
     <script>
-        const API_KEY = 'live_5X13Kyel2D8fx0TOcFVacO2U307RZVRX6FOJ3AncwBx4IUshWJA2MyNQZjyyKMml'; // Introduceți cheia API validă aici
+        const API_KEY = 'YOUR_API_KEY'; // Introduceți cheia API validă aici
         const API_URL = 'https://api.thecatapi.com/v1/images/search';
-        const PROXY_URL = 'https://thingproxy.freeboard.io/fetch/';
+        const PROXY_URL = 'https://corsproxy.io/?'; // Proxy pentru evitarea problemelor CORS
         let apiAccessCount = 0;
 
         document.getElementById('process-button').addEventListener('click', async () => {
