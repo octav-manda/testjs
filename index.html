@@ -1,111 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Procesare Imagine - TheCatAPI</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Procesare Imagini - TheCatAPI</title>
 </head>
 <body>
-    <h1>Procesare Imagini - TheCatAPI</h1>
-    <button id="process-button">Obține și procesează imaginea</button>
-    <div>
-        <p><strong>Timp de procesare:</strong> <span id="processing-time">-</span> ms</p>
-        <p><strong>Număr de accesări API:</strong> <span id="api-count">0</span></p>
-    </div>
-    <div id="json-output">
-        <h3>Răspuns JSON:</h3>
-        <pre id="json-console"></pre>
-    </div>
-    <canvas id="image-canvas" width="500" height="500" style="border: 1px solid black;"></canvas>
+<h1>Procesare Imagine - TheCatAPI</h1>
+<button id="fetchImage">Obține Imagine</button>
+<button id="rotateImage" disabled>Rotește Imaginea</button>
+<canvas id="catCanvas" width="600" height="400" style="border:1px solid black;"></canvas>
+<p id="info"></p>
+<script>
+  // Cheie API
+  const API_KEY = 'live_5X13Kyel2D8fx0TOcFVacO2U307RZVRX6FOJ3AncwBx4IUshWJA2MyNQZjyyKMml';
+  const API_URL = 'https://api.thecatapi.com/v1/images/search';
+  let accessCount = 0;
+  let rotationAngle = 0; // Unghiul curent al imaginii rotite
+  let img; // Obiectul imagine
 
-    <script>
-        const API_KEY = 'YOUR_API_KEY'; // Introduceți cheia API validă aici
-        const API_URL = 'https://api.thecatapi.com/v1/images/search';
-        const PROXY_URL = 'https://corsproxy.io/?'; // Proxy pentru evitarea problemelor CORS
-        let apiAccessCount = 0;
+  // Obține imaginea din API
+  document.getElementById("fetchImage").addEventListener("click", async () => {
+    const startTime = performance.now(); // Începe cronometrul
+    accessCount++;
 
-        document.getElementById('process-button').addEventListener('click', async () => {
-            const startTime = performance.now();
-            apiAccessCount++;
+    try {
+      // Obține imaginea de la API
+      const response = await fetch(API_URL, {
+        headers: { 'x-api-key': API_KEY }
+      });
+      const [data] = await response.json();
 
-            try {
-                // Obține date de la API prin proxy
-                const response = await fetch(PROXY_URL + API_URL, {
-                    headers: {
-                        'x-api-key': API_KEY
-                    }
-                });
+      // Încarcă imaginea într-un obiect Image
+      img = new Image();
+      img.src = data.url;
 
-                if (!response.ok) throw new Error('Eroare la accesarea API-ului.');
+      img.onload = () => {
+        const canvas = document.getElementById('catCanvas');
+        const ctx = canvas.getContext('2d');
 
-                const data = await response.json();
-                const imageUrl = data[0]?.url;
+        // Resetare canvas
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                if (!imageUrl) throw new Error('URL-ul imaginii nu a fost găsit în răspunsul JSON.');
+        // Desenează imaginea
+        ctx.drawImage(img, 0, 0, img.width, img.height);
 
-                // Afișare răspuns JSON
-                document.getElementById('json-console').textContent = JSON.stringify(data, null, 2);
-                console.log('URL-ul imaginii:', imageUrl);
+        // Afișează informații despre timp și accesări
+        const endTime = performance.now();
+        document.getElementById("info").textContent =
+          `Timp: ${(endTime - startTime).toFixed(2)} ms, Accesări API: ${accessCount}`;
 
-                // Prelucrare imagine
-                const img = new Image();
-                img.crossOrigin = 'Anonymous'; // Permite manipularea pe canvas
-                img.src = imageUrl;
+        // Activează butonul de rotire
+        document.getElementById("rotateImage").disabled = false;
+        rotationAngle = 0; // Resetează unghiul curent
+      };
+    } catch (error) {
+      console.error("Eroare:", error);
+      document.getElementById("info").textContent = "Eroare la accesare API.";
+    }
+  });
 
-                img.onload = () => {
-                    try {
-                        const canvas = document.getElementById('image-canvas');
-                        const ctx = canvas.getContext('2d');
+  // Rotește imaginea afișată
+  document.getElementById("rotateImage").addEventListener("click", () => {
+    if (!img) return; // Verifică dacă există o imagine încărcată
 
-                        // Setează dimensiunile canvasului conform imaginii
-                        canvas.width = img.height;
-                        canvas.height = img.width;
+    const canvas = document.getElementById('catCanvas');
+    const ctx = canvas.getContext('2d');
 
-                        // Rotește imaginea
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                        ctx.translate(canvas.width / 2, canvas.height / 2);
-                        ctx.rotate(90 * Math.PI / 180); // Rotație 90 de grade
-                        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+    // Actualizează unghiul de rotație
+    rotationAngle = (rotationAngle + 90) % 360;
 
-                        // Calculează timpul de procesare
-                        const endTime = performance.now();
-                        const processingTime = (endTime - startTime).toFixed(2);
+    // Redimensionează canvas-ul pentru rotație
+    if (rotationAngle === 90 || rotationAngle === 270) {
+      canvas.width = img.height;
+      canvas.height = img.width;
+    } else {
+      canvas.width = img.width;
+      canvas.height = img.height;
+    }
 
-                        // Afișare rezultate
-                        document.getElementById('processing-time').textContent = processingTime;
-                        document.getElementById('api-count').textContent = apiAccessCount;
-                    } catch (canvasError) {
-                        console.error('Eroare la manipularea imaginii pe canvas:', canvasError);
-                        showFallbackImage(imageUrl);
-                    }
-                };
-
-                img.onerror = () => {
-                    console.error('Nu s-a putut încărca imaginea.');
-                    showFallbackImage(imageUrl);
-                };
-
-            } catch (error) {
-                console.error('Eroare:', error.message);
-                alert('A apărut o eroare. Verificați consola pentru detalii.');
-            }
-        });
-
-        function showFallbackImage(imageUrl) {
-            // Afișează imaginea într-un element <img> ca fallback
-            const existingFallback = document.querySelector('.fallback-image');
-            if (existingFallback) existingFallback.remove(); // Elimină fallback-urile anterioare
-
-            const imgElement = document.createElement('img');
-            imgElement.src = imageUrl;
-            imgElement.alt = 'Imagine fallback';
-            imgElement.style.border = '1px solid black';
-            imgElement.style.marginTop = '20px';
-            imgElement.className = 'fallback-image';
-            document.body.appendChild(imgElement);
-
-            alert('Nu s-a putut procesa imaginea pe canvas. Imaginea originală a fost afișată.');
-        }
-    </script>
+    // Rotește și desenează imaginea
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((rotationAngle * Math.PI) / 180);
+    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+    ctx.restore();
+  });
+</script>
 </body>
 </html>
+
